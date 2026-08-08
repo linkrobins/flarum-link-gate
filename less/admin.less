@@ -1,0 +1,36 @@
+// The per-language editor.
+//
+// One collapsible block per installed language, which without any styling would
+// be a bare <details> sitting flush against the settings above it. Deliberately
+// neutral: colours are drawn from currentColor so this works on a light or dark
+// admin without depending on a Flarum LESS variable that may be renamed.
+
+.LinkGate-translation {
+  border: 1px solid fade(currentColor, 15%);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  padding: 0 12px;
+
+  > summary {
+    cursor: pointer;
+    padding: 8px 0;
+    font-weight: 600;
+    // The marker is the only affordance that this opens, so keep it.
+    list-style-position: inside;
+  }
+
+  &[open] > summary {
+    border-bottom: 1px solid fade(currentColor, 10%);
+    margin-bottom: 8px;
+  }
+
+  // The fields inside each language, indented so they read as belonging to it.
+  .Form-group {
+    margin-bottom: 12px;
+
+    label {
+      font-weight: 400;
+      opacity: 0.85;
+    }
+  }
+}
