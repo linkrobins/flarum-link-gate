@@ -19,7 +19,7 @@ use Tobyz\JsonApiServer\Schema\Field\Field;
 class GateContentHtml
 {
     public function __construct(
-        private readonly SwapGatedLinks $swap
+        private SwapGatedLinks $swap
     ) {
     }
 
