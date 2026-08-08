@@ -1,12 +1,17 @@
 // The per-language editor.
 //
 // One collapsible block per installed language, which without any styling would
-// be a bare <details> sitting flush against the settings above it. Deliberately
-// neutral: colours are drawn from currentColor so this works on a light or dark
-// admin without depending on a Flarum LESS variable that may be renamed.
+// be a bare <details> sitting flush against the settings above it.
+//
+// Plain rgba values, and deliberately no LESS colour functions. `fade()` and
+// friends need a real colour to compute with, and CSS keywords like
+// currentColor are not one: passing it compiles to
+// "error evaluating function `fade`", which fails the whole admin stylesheet
+// and takes the entire admin page down with it, not just this panel. A neutral
+// grey at low alpha reads correctly on a light or dark admin anyway.
 
 .LinkGate-translation {
-  border: 1px solid fade(currentColor, 15%);
+  border: 1px solid rgba(128, 128, 128, 0.3);
   border-radius: 4px;
   margin-bottom: 8px;
   padding: 0 12px;
@@ -20,11 +25,11 @@
   }
 
   &[open] > summary {
-    border-bottom: 1px solid fade(currentColor, 10%);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.2);
     margin-bottom: 8px;
   }
 
-  // The fields inside each language, indented so they read as belonging to it.
+  // The fields inside each language, so they read as belonging to it.
   .Form-group {
     margin-bottom: 12px;
 
