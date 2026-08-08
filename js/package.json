@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "name": "@linkrobins/link-gate",
+  "prettier": "@flarum/prettier-config",
+  "scripts": {
+    "dev": "webpack --mode development --watch",
+    "build": "webpack --mode production",
+    "format": "prettier --write src admin.js webpack.config.js",
+    "format-check": "prettier --check src admin.js webpack.config.js"
+  },
+  "devDependencies": {
+    "@flarum/prettier-config": "^1.0.0",
+    "flarum-webpack-config": "^3.0.4",
+    "prettier": "^3.3.3",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4"
+  }
+}
