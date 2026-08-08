@@ -136,14 +136,27 @@ class SwapGatedLinks
             $parent->insertBefore($document->createTextNode($after), $placeholder->nextSibling);
         }
 
-        $this->fill($document, $placeholder, $this->replacement($rule, $fallback));
+        $this->fill($document, $placeholder, $rule, $fallback);
     }
 
     /**
-     * Put the replacement markup where the placeholder stands, and remove it.
+     * Put the replacement where the placeholder stands, and remove it.
      */
-    private function fill(DOMDocument $document, DOMElement $placeholder, string $replacement): void
+    private function fill(DOMDocument $document, DOMElement $placeholder, int $rule, string $fallback): void
     {
+        // A code block is literal text by definition, so markup dropped into
+        // one would render as a live element inside the sample rather than read
+        // as part of it. The plain wording is what belongs there.
+        if ($this->insideCode($placeholder)) {
+            $placeholder->parentNode?->replaceChild(
+                $document->createTextNode($fallback),
+                $placeholder
+            );
+
+            return;
+        }
+
+        $replacement = $this->replacement($rule, $fallback);
         $nodes = $this->nodesFor($document, $replacement);
 
         $host = Html::hasBlockContent($replacement)
@@ -201,6 +214,20 @@ class SwapGatedLinks
         }
 
         return $nodes;
+    }
+
+    /**
+     * Whether this sits inside preformatted or code markup.
+     */
+    private function insideCode(DOMNode $node): bool
+    {
+        for ($current = $node->parentNode; $current instanceof DOMElement; $current = $current->parentNode) {
+            if (in_array(strtolower($current->nodeName), ['pre', 'code', 'kbd', 'samp'], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

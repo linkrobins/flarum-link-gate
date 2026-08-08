@@ -85,12 +85,25 @@ class SwapGatedLinksTest extends TestCase
 
     /** @test */
     #[Test]
+    public function inside_a_code_block_the_plain_wording_is_used(): void
+    {
+        // A code block is literal text, so markup dropped into one renders as a
+        // live element inside the sample instead of reading as part of it.
+        $result = $this->swap('<div class="Pitch">Join up</div>')
+            ->swap('<pre><code>'.$this->marker().'</code></pre>');
+
+        $this->assertEquals('<pre><code>Members only.</code></pre>', $result);
+        $this->assertStringNotContainsString('<div', $result);
+    }
+
+    /** @test */
+    #[Test]
     public function an_empty_wrapper_left_behind_by_the_lift_goes_too(): void
     {
-        // The link sat inside a code span, so both halves of the split would
+        // The link sat inside a span, so both halves of the split would
         // otherwise render as stray empty boxes.
         $result = $this->swap('<div class="Pitch">Join up</div>')
-            ->swap('<p><code>'.$this->marker().'</code></p>');
+            ->swap('<p><span class="x">'.$this->marker().'</span></p>');
 
         $this->assertEquals('<div class="Pitch">Join up</div>', $result);
     }
