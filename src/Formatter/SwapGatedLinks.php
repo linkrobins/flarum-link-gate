@@ -38,8 +38,8 @@ class SwapGatedLinks
     private ?array $replacements = null;
 
     public function __construct(
-        private readonly Settings $settings,
-        private readonly HtmlSanitiser $sanitiser
+        private Settings $settings,
+        private HtmlSanitiser $sanitiser
     ) {
     }
 

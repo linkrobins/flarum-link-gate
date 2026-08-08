@@ -17,7 +17,7 @@ use LinkRobins\LinkGate\Formatter\SwapGatedLinks;
 class GateContentHtml
 {
     public function __construct(
-        private readonly SwapGatedLinks $swap
+        private SwapGatedLinks $swap
     ) {
     }
 

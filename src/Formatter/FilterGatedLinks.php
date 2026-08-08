@@ -29,8 +29,8 @@ use Psr\Http\Message\ServerRequestInterface;
 class FilterGatedLinks
 {
     public function __construct(
-        private readonly Settings $settings,
-        private readonly Translator $translator
+        private Settings $settings,
+        private Translator $translator
     ) {
     }
 

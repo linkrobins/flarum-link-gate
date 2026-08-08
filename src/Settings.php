@@ -31,7 +31,7 @@ class Settings
     private ?array $rules = null;
 
     public function __construct(
-        private readonly SettingsRepositoryInterface $settings
+        private SettingsRepositoryInterface $settings
     ) {
     }
 
