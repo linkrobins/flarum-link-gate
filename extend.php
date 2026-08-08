@@ -34,5 +34,9 @@ return [
         // Declared from the first release so that per-domain messages can ship
         // by writing this key, with nothing to migrate. Empty means the four
         // settings above compose the single rule.
-        ->default(Settings::RULES, ''),
+        ->default(Settings::RULES, '')
+
+        // Per-language overrides of the message. Empty means every reader gets
+        // the one message above, which is what a single-language forum wants.
+        ->default(Settings::TRANSLATIONS, ''),
 ];
