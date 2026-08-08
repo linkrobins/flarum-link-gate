@@ -108,7 +108,12 @@ class GatedLinkTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
 
-        return (string) $response->getBody();
+        // Flarum 1.8 escapes forward slashes in JSON and 2.x does not, so the
+        // same URL reads as "https:\/\/mega.nz" on one line and
+        // "https://mega.nz" on the other. Undoing that keeps one set of
+        // assertions honest on both, and it can only widen the haystack, so the
+        // absence checks below get stricter rather than looser.
+        return str_replace('\\/', '/', (string) $response->getBody());
     }
 
     /**
