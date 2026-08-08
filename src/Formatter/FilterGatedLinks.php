@@ -2,11 +2,6 @@
 
 namespace LinkRobins\LinkGate\Formatter;
 
-use DOMAttr;
-use DOMDocument;
-use DOMElement;
-use DOMText;
-use DOMXPath;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\Translator;
 use Flarum\Post\Post;
@@ -19,18 +14,23 @@ use Psr\Http\Message\ServerRequestInterface;
  * Stage one: take the gated URLs out of the post before it is rendered.
  *
  * This runs as a rendering callback, which Flarum hands the request, so it can
- * ask who is reading. It works on the stored TextFormatter XML and leaves a
- * marker where each gated link used to be. Nothing downstream can put the URL
- * back, because by the time the renderer sees the XML the address is gone.
+ * ask who is reading. It works on the stored TextFormatter XML, so by the time
+ * the renderer sees it the address is gone and nothing downstream can put it
+ * back.
  *
  * The callback signature is identical on Flarum 1.8 and 2.x, so this file is
  * the same on both release lines. Only the stage-two hook differs.
+ *
+ * Rendering is not the only way a post leaves the server: see UnparseGatedLinks
+ * for its source, which is what the plain half of a notification email is built
+ * from.
  */
 class FilterGatedLinks
 {
     public function __construct(
         private Settings $settings,
-        private Translator $translator
+        private Translator $translator,
+        private Redactor $redactor
     ) {
     }
 
@@ -53,7 +53,15 @@ class FilterGatedLinks
             return $xml;
         }
 
-        return $this->redact($xml, $rules);
+        // With a request there is a stage two, which turns a marker into the
+        // admin's HTML. Without one there is not, so the wording goes in
+        // directly. A marker that survives as far as an inbox shows the reader
+        // stray characters, which is what a real notification email did.
+        $replacement = $request === null
+            ? fn (int $index, Rule $rule): string => $this->wording($rule)
+            : fn (int $index, Rule $rule): string => Sentinel::wrap($index, Sentinel::strip($this->wording($rule)));
+
+        return $this->redactor->redact($xml, $rules, $replacement);
     }
 
     /**
@@ -92,199 +100,10 @@ class FilterGatedLinks
     }
 
     /**
-     * @param list<Rule> $rules
+     * The admin's plain wording, in the reader's language where there is one.
      */
-    private function redact(string $xml, array $rules): string
+    private function wording(Rule $rule): string
     {
-        if (! $this->worthParsing($xml, $rules)) {
-            return $xml;
-        }
-
-        $document = new DOMDocument();
-        $previous = libxml_use_internal_errors(true);
-        $loaded = $document->loadXML($xml);
-        libxml_use_internal_errors($previous);
-
-        if (! $loaded) {
-            // Unparseable XML is not something to guess at, but it may still
-            // hold the URL as text, so the plain-text pass still runs.
-            return $this->redactText($xml, $rules);
-        }
-
-        $xpath = new DOMXPath($document);
-        $changed = false;
-
-        // Elements first. An autolink carries the address in its text content
-        // as well as its url attribute, so the whole element goes, not just the
-        // attribute. Every attribute of every tag is tested rather than only
-        // URL/url, which covers <IMG src> and whatever an embed extension adds.
-        /** @var iterable<DOMElement> $elements */
-        $elements = $xpath->query('//*[@*]') ?: [];
-
-        foreach (iterator_to_array($elements) as $element) {
-            if (! $element->parentNode instanceof DOMElement) {
-                // Already removed with an ancestor, or it is the root, which
-                // cannot be swapped for a text node.
-                continue;
-            }
-
-            $index = $this->matchingRule($this->candidates($element), $rules);
-
-            if ($index === null) {
-                continue;
-            }
-
-            $element->parentNode->replaceChild(
-                $document->createTextNode($this->marker($index, $rules[$index])),
-                $element
-            );
-
-            $changed = true;
-        }
-
-        // Then any address left sitting in plain text, which is where a URL
-        // inside a code block or an un-autolinked one ends up.
-        /** @var iterable<DOMText> $texts */
-        $texts = $xpath->query('//text()') ?: [];
-
-        foreach (iterator_to_array($texts) as $text) {
-            if (Sentinel::present($text->nodeValue ?? '')) {
-                continue; // A marker this pass just wrote.
-            }
-
-            $replaced = $this->redactText($text->nodeValue ?? '', $rules);
-
-            if ($replaced !== $text->nodeValue) {
-                $text->nodeValue = $replaced;
-                $changed = true;
-            }
-        }
-
-        if (! $changed) {
-            return $xml;
-        }
-
-        return $document->saveXML($document->documentElement) ?: $xml;
-    }
-
-    /**
-     * Skip the DOM parse when no rule could possibly match.
-     *
-     * Most posts contain no gated link at all and should cost close to nothing.
-     * A lowercased substring scan of the raw XML answers that, and it is both
-     * cheaper and wider than reading the url attributes out with s9e's Utils:
-     * an address sitting in a code block or in an attribute some embed
-     * extension invented never appears in URL/url at all.
-     *
-     * @param list<Rule> $rules
-     */
-    private function worthParsing(string $xml, array $rules): bool
-    {
-        $haystack = strtolower($xml);
-
-        foreach ($rules as $rule) {
-            foreach ($rule->matcher->domainList() as $domain) {
-                if (str_contains($haystack, $domain)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * The strings on an element worth testing against the rules.
-     *
-     * Every attribute counts, which covers <URL url>, <IMG src> and whatever an
-     * embed extension added. Text counts only on an element with no element
-     * children: an autolink written without a scheme keeps its address solely
-     * in its text, but taking an ancestor's text as well would let one gated
-     * link inside a paragraph delete the entire paragraph.
-     *
-     * @return list<string>
-     */
-    private function candidates(DOMElement $element): array
-    {
-        $values = [];
-
-        foreach ($element->attributes as $attribute) {
-            /** @var DOMAttr $attribute */
-            $values[] = $attribute->value;
-        }
-
-        if (! $element->getElementsByTagName('*')->length) {
-            $text = trim($element->textContent);
-
-            if ($text !== '') {
-                $values[] = $text;
-            }
-        }
-
-        return $values;
-    }
-
-    /**
-     * The index of the first rule matching any of these values.
-     *
-     * @param list<string>      $values
-     * @param list<Rule>        $rules
-     */
-    private function matchingRule(array $values, array $rules): ?int
-    {
-        foreach ($values as $value) {
-            foreach ($rules as $index => $rule) {
-                if ($rule->matcher->matches($value)) {
-                    return $index;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Replace any gated address left in a run of plain text.
-     *
-     * @param list<Rule> $rules
-     */
-    private function redactText(string $text, array $rules): string
-    {
-        if ($text === '' || ! preg_match('~[^\s]~', $text)) {
-            return $text;
-        }
-
-        foreach ($rules as $index => $rule) {
-            foreach ($rule->matcher->domainList() as $domain) {
-                if (stripos($text, $domain) === false) {
-                    continue;
-                }
-
-                // Take the whole whitespace-delimited token the domain sits in,
-                // so the scheme, path and query go with it.
-                $pattern = '~\S*'.preg_quote($domain, '~').'\S*~i';
-
-                $text = preg_replace_callback(
-                    $pattern,
-                    function (array $match) use ($rule, $index): string {
-                        return $rule->matcher->matches($match[0])
-                            ? $this->marker($index, $rule)
-                            : $match[0];
-                    },
-                    $text
-                ) ?? $text;
-            }
-        }
-
-        return $text;
-    }
-
-    private function marker(int $index, Rule $rule): string
-    {
-        // The reader's own language, which core has already set on the
-        // translator for this request. Notification mail sets it per recipient
-        // too, so a subscriber gets the wording in their language rather than
-        // the forum's.
         $rule = $this->settings->messageFor($rule, $this->translator->getLocale());
 
         $text = trim($rule->text);
@@ -293,6 +112,6 @@ class FilterGatedLinks
             $text = $this->translator->trans(Settings::EXTENSION_ID.'.forum.fallback');
         }
 
-        return Sentinel::wrap($index, Sentinel::strip($text));
+        return $text;
     }
 }
