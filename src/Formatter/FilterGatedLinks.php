@@ -9,6 +9,7 @@ use DOMText;
 use DOMXPath;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\Translator;
+use Flarum\Post\Post;
 use LinkRobins\LinkGate\Rule;
 use LinkRobins\LinkGate\Sentinel;
 use LinkRobins\LinkGate\Settings;
@@ -48,7 +49,7 @@ class FilterGatedLinks
         // Nobody can hand-place a marker and pass it off as ours.
         $xml = Sentinel::strip($xml);
 
-        if ($this->permitted($request)) {
+        if ($this->permitted($request, $context)) {
             return $xml;
         }
 
@@ -64,14 +65,26 @@ class FilterGatedLinks
      * instead of the link. Failing the other way would post the URL to every
      * subscriber regardless of their group.
      */
-    private function permitted(?ServerRequestInterface $request): bool
+    private function permitted(?ServerRequestInterface $request, mixed $context): bool
     {
         if ($request === null) {
             return false;
         }
 
         try {
-            return RequestUtil::getActor($request)->hasPermission(Settings::PERMISSION);
+            $actor = RequestUtil::getActor($request);
+
+            if ($actor->hasPermission(Settings::PERMISSION)) {
+                return true;
+            }
+
+            // Anyone who can edit the post already receives its raw source from
+            // core, which gates the content field on exactly this check, so
+            // blanking the link in the rendered copy would hide nothing from
+            // them. That covers the author seeing their own link and a
+            // moderator seeing what they are moderating, in one question core
+            // has already answered.
+            return $context instanceof Post && $actor->can('edit', $context);
         } catch (\Throwable $e) {
             // An actor that cannot be read is not a permitted one.
             return false;

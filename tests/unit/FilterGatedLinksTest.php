@@ -11,6 +11,7 @@ namespace LinkRobins\LinkGate\Tests\unit;
 
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\Translator;
+use Flarum\Post\Post;
 use Flarum\Testing\unit\TestCase;
 use Flarum\User\User;
 use Laminas\Diactoros\ServerRequest;
@@ -195,6 +196,48 @@ class FilterGatedLinksTest extends TestCase
         );
 
         $this->assertFalse(Sentinel::present($filtered));
+    }
+
+    /** @test */
+    #[Test]
+    public function whoever_can_edit_the_post_keeps_the_link(): void
+    {
+        // Core gates the raw source on exactly this check and hands it over, so
+        // there is nothing left to hide from the author or a moderator. The
+        // integration suite proves the other half, that core really does send
+        // them the source.
+        $post = Mockery::mock(Post::class);
+
+        $actor = Mockery::mock(User::class);
+        $actor->shouldReceive('hasPermission')->andReturn(false);
+        $actor->shouldReceive('can')->with('edit', $post)->andReturn(true);
+
+        $request = RequestUtil::withActor(new ServerRequest(), $actor);
+        $xml = '<r><p><URL url="https://mega.nz/a">a</URL></p></r>';
+
+        $this->assertEquals($xml, ($this->filter())(null, $post, $xml, $request));
+    }
+
+    /** @test */
+    #[Test]
+    public function someone_who_cannot_edit_the_post_still_loses_the_link(): void
+    {
+        $post = Mockery::mock(Post::class);
+
+        $actor = Mockery::mock(User::class);
+        $actor->shouldReceive('hasPermission')->andReturn(false);
+        $actor->shouldReceive('can')->with('edit', $post)->andReturn(false);
+
+        $request = RequestUtil::withActor(new ServerRequest(), $actor);
+
+        $filtered = ($this->filter())(
+            null,
+            $post,
+            '<r><p><URL url="https://mega.nz/a">a</URL></p></r>',
+            $request
+        );
+
+        $this->assertStringNotContainsString('mega.nz', $filtered);
     }
 
     /** @test */
