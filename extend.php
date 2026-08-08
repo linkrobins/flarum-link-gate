@@ -1,6 +1,6 @@
 <?php
 
-use Flarum\Api\Resource\PostResource;
+use Flarum\Api\Serializer\BasicPostSerializer;
 use Flarum\Extend;
 use LinkRobins\LinkGate\Api\GateContentHtml;
 use LinkRobins\LinkGate\Formatter\FilterGatedLinks;
@@ -15,13 +15,17 @@ return [
     // Stage one, and the only part that matters for the guarantee: the gated
     // URLs come out of the post's XML before it is rendered, for any reader
     // without the permission. Nothing downstream can put them back.
+    //
+    // Identical to the 2.x line: Formatter::render passes the request to every
+    // rendering callback with the same signature on both majors.
     (new Extend\Formatter())
         ->render(FilterGatedLinks::class),
 
     // Stage two, cosmetic: the markers stage one left behind become the admin's
-    // HTML. This is the one extender that differs on the 1.8 line.
-    (new Extend\ApiResource(PostResource::class))
-        ->field('contentHtml', GateContentHtml::class),
+    // HTML. This is the extender that differs from the 2.x line, which reaches
+    // the same swap through an API resource field instead.
+    (new Extend\ApiSerializer(BasicPostSerializer::class))
+        ->attributes(GateContentHtml::class),
 
     (new Extend\Settings())
         // A kill switch, so the behaviour can be neutralised without disabling

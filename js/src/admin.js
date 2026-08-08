@@ -1,7 +1,7 @@
 // Admin settings for Link Gate.
 //
 // Every entry is a plain typed setting, which the auto-built extension page
-// renders on both release lines without a custom component.
+// renders without a custom component.
 //
 import app from 'flarum/admin/app';
 
@@ -41,7 +41,8 @@ function settings() {
 }
 
 app.initializers.add(EXT_ID, () => {
-  const registry = app.registry.for(EXT_ID);
+  // 1.8 calls this extensionData; 2.x renamed it to registry. Same API.
+  const registry = app.extensionData.for(EXT_ID);
 
   // Resolved here rather than at module load, so the labels come back in the
   // admin's own language instead of frozen to the English fallback.
