@@ -281,6 +281,12 @@ class FilterGatedLinks
 
     private function marker(int $index, Rule $rule): string
     {
+        // The reader's own language, which core has already set on the
+        // translator for this request. Notification mail sets it per recipient
+        // too, so a subscriber gets the wording in their language rather than
+        // the forum's.
+        $rule = $this->settings->messageFor($rule, $this->translator->getLocale());
+
         $text = trim($rule->text);
 
         if ($text === '') {

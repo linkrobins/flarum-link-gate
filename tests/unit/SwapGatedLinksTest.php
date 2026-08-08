@@ -9,6 +9,7 @@
 
 namespace LinkRobins\LinkGate\Tests\unit;
 
+use Flarum\Locale\Translator;
 use Flarum\Testing\unit\TestCase;
 use LinkRobins\LinkGate\Formatter\SwapGatedLinks;
 use LinkRobins\LinkGate\HtmlSanitiser;
@@ -22,15 +23,16 @@ use PHPUnit\Framework\Attributes\Test;
  */
 class SwapGatedLinksTest extends TestCase
 {
-    private function swap(string $html): SwapGatedLinks
+    private function swap(string $html, array $extra = [], string $locale = 'en'): SwapGatedLinks
     {
         return new SwapGatedLinks(
-            new Settings(new ArraySettings([
+            new Settings(new ArraySettings($extra + [
                 Settings::DOMAINS => 'mega.nz',
                 Settings::HTML => $html,
                 Settings::FALLBACK => 'Members only.',
             ])),
-            new HtmlSanitiser()
+            new HtmlSanitiser(),
+            new Translator($locale)
         );
     }
 
