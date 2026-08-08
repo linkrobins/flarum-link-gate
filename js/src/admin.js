@@ -118,7 +118,7 @@ function translationEditor() {
   // editor stays out of the way rather than showing a single redundant box.
   if (list.length < 2) return null;
 
-  return m('.Form-group', [
+  return m('.Form-group.LinkGate-translations', [
     m('label', trans('translations.label')),
     m('.helpText', trans('translations.help')),
     list.map(([code, name]) => {
