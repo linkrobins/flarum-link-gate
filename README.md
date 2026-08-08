@@ -1,7 +1,5 @@
 # Link Gate for Flarum
 
-[![Latest Stable Version](https://img.shields.io/packagist/v/linkrobins/link-gate.svg)](https://packagist.org/packages/linkrobins/link-gate)
-
 Pick the domains you want to keep behind a permission. Anyone without it sees
 your own message where the link used to be, and **the address is not in the
 page at all**.
@@ -33,6 +31,11 @@ Then enable it and, on the extension's settings page:
 3. **Plain wording**: a short line used where HTML cannot go, mainly in
    notification emails.
 
+If your forum runs in more than one language, an **Other languages** section
+appears under those settings, with a box per installed language. Fill one in and
+readers using it see that instead; leave it blank and they get what you wrote
+above.
+
 Finally, on **Permissions**, grant *View gated links* to the groups that should
 see the real links. Nobody has it by default. It is a permission rather than a
 single group setting, so you can give it to several groups at once and it
@@ -59,6 +62,12 @@ nobody to check and refuses rather than guesses. Subscribers get your plain
 wording instead of the link and open the discussion to get it. Guessing the
 other way would mail the address to every subscriber regardless of their group,
 which would undo the whole thing.
+
+This covers both halves of the message. A notification email is sent as HTML
+with a plain-text copy alongside it, and the plain copy is built from the post's
+own source rather than from the rendered version, so it needs stopping
+separately. Mail clients show the HTML, but the plain copy travels with it and
+is just as readable.
 
 **Searching can reveal that a link exists.** Flarum's default search looks
 through the stored text of posts, so someone searching `mega.nz` may find that
