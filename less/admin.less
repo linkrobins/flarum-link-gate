@@ -11,6 +11,16 @@
 // grey at low alpha reads correctly on a light or dark admin anyway.
 
 .LinkGate-translation {
+  // Flarum 2.x styles .Form-group as a column flex box with
+  // `align-items: flex-start`, and unlike .Form it has no `> * { width: 100% }`
+  // rule, so a child sizes to its own content: these blocks came out only as
+  // wide as their summary text. 1.8's Form.less has no flex at all, so the same
+  // markup was already full width there, which is why it only showed on 2.x.
+  //
+  // align-self is the targeted answer. It overrides that align-items for these
+  // elements alone, and is inert in 1.8's block layout.
+  align-self: stretch;
+
   border: 1px solid rgba(128, 128, 128, 0.3);
   border-radius: 4px;
   margin-bottom: 8px;
@@ -29,13 +39,23 @@
     margin-bottom: 8px;
   }
 
-  // The fields inside each language, so they read as belonging to it.
+  // The fields inside each language, so they read as belonging to it. Their
+  // wrapper is a .Form-group too, so its children need the same treatment or
+  // the textareas fall back to their default column width.
   .Form-group {
     margin-bottom: 12px;
+
+    > * {
+      align-self: stretch;
+    }
 
     label {
       font-weight: 400;
       opacity: 0.85;
+    }
+
+    textarea.FormControl {
+      width: 100%;
     }
   }
 }
