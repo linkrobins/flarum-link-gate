@@ -16,6 +16,7 @@ use Flarum\Testing\unit\TestCase;
 use Flarum\User\User;
 use Laminas\Diactoros\ServerRequest;
 use LinkRobins\LinkGate\Formatter\FilterGatedLinks;
+use LinkRobins\LinkGate\Formatter\Redactor;
 use LinkRobins\LinkGate\Sentinel;
 use LinkRobins\LinkGate\Settings;
 use Mockery;
@@ -37,7 +38,8 @@ class FilterGatedLinksTest extends TestCase
                 Settings::HTML => '<div class="Pitch">Members only</div>',
                 Settings::FALLBACK => 'Members only.',
             ])),
-            new Translator('en')
+            new Translator('en'),
+            new Redactor()
         );
     }
 
@@ -246,7 +248,8 @@ class FilterGatedLinksTest extends TestCase
     {
         $filter = new FilterGatedLinks(
             new Settings(new ArraySettings([Settings::DOMAINS => ''])),
-            new Translator('en')
+            new Translator('en'),
+            new Redactor()
         );
 
         $xml = '<r><p><URL url="https://mega.nz/a">a</URL></p></r>';
@@ -283,12 +286,27 @@ class FilterGatedLinksTest extends TestCase
     {
         $filter = $this->filter([Settings::FALLBACK => '']);
 
-        $filtered = $filter(null, null, '<r><p><URL url="https://mega.nz/a">a</URL></p></r>', null);
+        $filtered = $filter(null, null, '<r><p><URL url="https://mega.nz/a">a</URL></p></r>', $this->request(false));
 
         preg_match(Sentinel::pattern(), $filtered, $match);
 
         $this->assertNotEmpty($match[2]);
         $this->assertStringNotContainsString('mega.nz', $match[2]);
+    }
+
+    /** @test */
+    #[Test]
+    public function with_no_request_the_wording_goes_in_without_a_marker(): void
+    {
+        // There is no stage two on this path, so a marker would survive all the
+        // way to the reader. A real notification email showed exactly that: the
+        // private-use codepoints were stripped somewhere in transit and the
+        // rule index was left behind, reading "0Members only.".
+        $filtered = $this->filtered('<r><p><URL url="https://mega.nz/a">a</URL></p></r>', null);
+
+        $this->assertFalse(Sentinel::present($filtered));
+        $this->assertStringContainsString('Members only.', $filtered);
+        $this->assertStringNotContainsString('mega.nz', $filtered);
     }
 
     protected function tearDown(): void

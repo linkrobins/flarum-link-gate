@@ -1,6 +1,25 @@
 # Link Gate: build scope
 
-Status: scoped, not built. Written 2026-07-28.
+**Status: BUILT. This document is the original design, written 2026-07-28, kept for the
+reasoning behind the decisions. Where it disagrees with the code, the code is right.**
+
+What changed on the way, and why:
+
+- **Two release lines, not one artifact.** The 2.x line is `main`, the 1.8 line is `1.x`,
+  with separate tag series. Written before that decision, so §2.1's "dual-major" means
+  "works on both majors", which it does, via two branches rather than one build.
+- **Whoever can edit the post keeps the link** (§6 question 1, answered yes and then some).
+  Core already hands them the source, so hiding the rendered copy would hide nothing.
+- **A post's SOURCE is redacted too, not just its render.** §4 checked the five HTML email
+  blades and missed the plain ones beside them, which interpolate `$post->content` and
+  never touch the renderer. Every notification email leaked the address until this was
+  found by reading one. See `UnparseGatedLinks` and `SourceAccess`.
+- **Inside a code block the plain wording is used**, not the HTML, because markup dropped
+  into a `<pre>` renders as a live element inside the sample.
+- **The admin can write the message per language.** §3 assumed one message; on a
+  multilingual forum that showed a German reader the English pitch.
+- **No `Utils::getAttributeValues` fast path** (§2.2). A substring scan of the raw XML is
+  cheaper and strictly wider.
 
 Origin: an extension request. The requester runs a membership forum and wants file-host
 links (mega.nz, drive.google.com and similar) to be readable only by people in his paid
