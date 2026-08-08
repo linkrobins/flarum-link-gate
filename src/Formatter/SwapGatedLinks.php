@@ -7,6 +7,7 @@ use DOMElement;
 use DOMNode;
 use DOMText;
 use DOMXPath;
+use Flarum\Locale\Translator;
 use LinkRobins\LinkGate\Html;
 use LinkRobins\LinkGate\HtmlSanitiser;
 use LinkRobins\LinkGate\Rule;
@@ -34,12 +35,14 @@ class SwapGatedLinks
     /** A marker per post is normal; thousands means something has gone wrong. */
     private const MAX_MARKERS = 500;
 
-    /** @var array<int, string>|null */
-    private ?array $replacements = null;
+    /** Sanitised replacement HTML, keyed by locale then rule index. */
+    /** @var array<string, array<int, string>> */
+    private array $replacements = [];
 
     public function __construct(
         private Settings $settings,
-        private HtmlSanitiser $sanitiser
+        private HtmlSanitiser $sanitiser,
+        private Translator $translator
     ) {
     }
 
@@ -317,16 +320,23 @@ class SwapGatedLinks
      */
     private function replacement(int $rule, string $fallback): string
     {
-        if ($this->replacements === null) {
-            $this->replacements = [];
+        // Keyed by locale as well as rule, because one process can render for
+        // more than one reader, and the admin may have written the block in
+        // several languages.
+        $locale = $this->translator->getLocale();
+
+        if (! isset($this->replacements[$locale])) {
+            $this->replacements[$locale] = [];
 
             foreach ($this->settings->rules() as $index => $configured) {
                 /** @var Rule $configured */
-                $this->replacements[$index] = $this->sanitiser->sanitise($configured->html);
+                $this->replacements[$locale][$index] = $this->sanitiser->sanitise(
+                    $this->settings->messageFor($configured, $locale)->html
+                );
             }
         }
 
-        $html = $this->replacements[$rule] ?? '';
+        $html = $this->replacements[$locale][$rule] ?? '';
 
         if (trim($html) !== '') {
             return $html;

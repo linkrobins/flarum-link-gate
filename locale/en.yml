@@ -14,6 +14,10 @@ linkrobins-link-gate:
       fallback_label: Plain wording
       fallback_help: Used where HTML cannot go, in particular notification emails. Keep it short and say where the link can be found.
 
+    translations:
+      label: Other languages
+      help: What you wrote above is shown to everyone. Fill in a language here and readers using it see that instead. Leave one blank and it falls back to what you wrote above.
+
     permissions:
       view_gated_links_label: View gated links
 

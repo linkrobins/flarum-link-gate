@@ -25,10 +25,16 @@ class Settings
     /** Reserved for per-domain rules. Wins over the four keys above when set. */
     public const RULES = self::PREFIX.'rules';
 
+    /** Per-language overrides of the message: {"de": {"html": ..., "text": ...}}. */
+    public const TRANSLATIONS = self::PREFIX.'translations';
+
     public const PERMISSION = self::PREFIX.'viewGatedLinks';
 
     /** @var list<Rule>|null */
     private ?array $rules = null;
+
+    /** @var array<string, array{html: string, text: string}>|null */
+    private ?array $translations = null;
 
     public function __construct(
         private SettingsRepositoryInterface $settings
@@ -56,6 +62,106 @@ class Settings
         }
 
         return $this->rules = $this->fromList() ?? $this->fromPlainSettings();
+    }
+
+    /**
+     * The admin's message in each language they have written one for.
+     *
+     * Keyed by normalised locale code. A language the admin left blank simply
+     * is not here, and falls back to the one message they always have.
+     *
+     * @return array<string, array{html: string, text: string}>
+     */
+    public function translations(): array
+    {
+        if ($this->translations !== null) {
+            return $this->translations;
+        }
+
+        $raw = $this->settings->get(self::TRANSLATIONS);
+
+        if (! is_string($raw) || trim($raw) === '') {
+            return $this->translations = [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        if (! is_array($decoded)) {
+            return $this->translations = [];
+        }
+
+        $translations = [];
+
+        foreach ($decoded as $locale => $entry) {
+            if (! is_string($locale) || ! is_array($entry)) {
+                continue;
+            }
+
+            $translations[self::normaliseLocale($locale)] = [
+                'html' => is_string($entry['html'] ?? null) ? $entry['html'] : '',
+                'text' => is_string($entry['text'] ?? null) ? $entry['text'] : '',
+            ];
+        }
+
+        return $this->translations = $translations;
+    }
+
+    /**
+     * Locale codes reach us as `pt_BR`, `pt-BR` or `pt-br` depending on who
+     * wrote them, so they are compared in one shape.
+     */
+    public static function normaliseLocale(string $locale): string
+    {
+        return strtolower(str_replace('_', '-', trim($locale)));
+    }
+
+    /**
+     * The rule as a reader in this locale should see it.
+     *
+     * Falls back a step at a time: the exact locale, then the language without
+     * its region, then the message the admin always has. Each field falls back
+     * on its own, so writing the HTML in German without the plain wording
+     * leaves the wording in the default language rather than blanking it.
+     */
+    public function messageFor(Rule $rule, ?string $locale): Rule
+    {
+        $translations = $this->translations();
+
+        if ($translations === [] || $locale === null || trim($locale) === '') {
+            return $rule;
+        }
+
+        $locale = self::normaliseLocale($locale);
+        $candidates = [$locale];
+
+        if (($dash = strpos($locale, '-')) !== false) {
+            $candidates[] = substr($locale, 0, $dash);
+        }
+
+        $html = null;
+        $text = null;
+
+        foreach ($candidates as $candidate) {
+            $entry = $translations[$candidate] ?? null;
+
+            if ($entry === null) {
+                continue;
+            }
+
+            if ($html === null && trim($entry['html']) !== '') {
+                $html = $entry['html'];
+            }
+
+            if ($text === null && trim($entry['text']) !== '') {
+                $text = $entry['text'];
+            }
+        }
+
+        if ($html === null && $text === null) {
+            return $rule;
+        }
+
+        return new Rule($rule->matcher, $html ?? $rule->html, $text ?? $rule->text);
     }
 
     /**
