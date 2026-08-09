@@ -1,5 +1,7 @@
 # Link Gate for Flarum
 
+[![Latest Stable Version](https://img.shields.io/packagist/v/linkrobins/link-gate.svg)](https://packagist.org/packages/linkrobins/link-gate)
+
 Pick the domains you want to keep behind a permission. Anyone without it sees
 your own message where the link used to be, and **the address is not in the
 page at all**.
