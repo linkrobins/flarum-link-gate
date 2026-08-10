@@ -10,7 +10,7 @@
         "membership",
         "paywall"
     ],
-    "homepage": "https://linkrobins.com",
+    "homepage": "https://linkrobins.com/extensions/link-gate",
     "support": {
         "issues": "https://github.com/linkrobins/flarum-link-gate/issues",
         "source": "https://github.com/linkrobins/flarum-link-gate"
