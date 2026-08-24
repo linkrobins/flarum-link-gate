@@ -3,6 +3,7 @@
 namespace LinkRobins\LinkGate\Api;
 
 use Flarum\Post\CommentPost;
+use Flarum\Post\Post;
 use LinkRobins\LinkGate\SourceAccess;
 use Tobyz\JsonApiServer\Context;
 use Tobyz\JsonApiServer\Schema\Field\Field;
@@ -24,7 +25,18 @@ class RevealSourceToEditor
 {
     public function __invoke(Field $field): Field
     {
-        return $field->get(function (CommentPost $post, Context $context): ?string {
+        return $field->get(function (Post $post, Context $context): mixed {
+            // Event posts walk through this same field: core serialises
+            // `content` for every non-comment post, for every reader. Their
+            // content is an array, is never redacted on unparse, and must be
+            // handed back untouched. Without this guard the CommentPost
+            // type-hint made one renamed discussion a TypeError, and the whole
+            // thread a 500 (the 1.8 line always had the instanceof check; the
+            // port dropped it).
+            if (! $post instanceof CommentPost) {
+                return $post->content;
+            }
+
             return SourceAccess::permitted(fn () => $post->content);
         });
     }
