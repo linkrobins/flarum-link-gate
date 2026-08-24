@@ -97,4 +97,3 @@ Composer picks the right one for your forum on its own, so
 ## Links
 
 - [Report a problem](https://github.com/linkrobins/flarum-link-gate/issues)
-- [Forum and support](https://linkrobins.com/forum)
