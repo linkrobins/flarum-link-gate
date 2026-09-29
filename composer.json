@@ -63,7 +63,7 @@
     },
     "extra": {
         "flarum-extension": {
-            "title": "Link Robins Link Gate",
+            "title": "LR Link Gate",
             "category": "feature",
             "icon": {
                 "name": "fas fa-user-lock",
