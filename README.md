@@ -18,19 +18,39 @@ Link Gate removes the address on the server, before the post is rendered. For a
 reader without the permission the bytes never leave the machine, so there is
 nothing to find in devtools, in the page source, or in the API.
 
+## What gets gated
+
+Any address on a gated domain is taken out of the post, not only clickable
+links. That covers links, autolinked addresses, images and whatever an embed
+extension adds, and a plain-text sweep afterwards catches addresses that were
+typed without being turned into links. Everything else in the post renders
+normally, and a post can hold several gated links, each replaced on its own.
+Inside a code block the plain wording is used instead of your HTML, because
+markup dropped into a code sample would show up as a live element.
+
+## Requirements
+
+- Flarum 2.0 or later
+- PHP 8.3+ with the `dom` and `libxml` extensions (standard on most hosts)
+
 ## Setup
 
 ```sh
 composer require linkrobins/link-gate
 ```
 
-Then enable it and, on the extension's settings page:
+Then switch it on in the admin panel's Extensions page and, on the extension's
+settings page:
 
-1. **Gated domains**, one per line, for example `mega.nz`. Subdomains are
+1. **Gate links**, a master switch. Turn it off to show every link to everyone
+   again without losing your domain list. It is on by default.
+2. **Gated domains**, one per line, for example `mega.nz`. Subdomains are
    included, so `mega.nz` also covers `folder.mega.nz`. Leave it empty and
    nothing is gated.
-2. **What to show instead**: the HTML shown where a gated link used to be.
-3. **Plain wording**: a short line used where HTML cannot go, mainly in
+3. **What to show instead**: the HTML shown where a gated link used to be.
+   Anything you would put in a post works, and it is sanitized before it is
+   shown. Leave it empty to show the plain wording instead.
+4. **Plain wording**: a short line used where HTML cannot go, mainly in
    notification emails.
 
 If your forum runs in more than one language, an **Other languages** section
@@ -38,7 +58,8 @@ appears under those settings, with a box per installed language. Fill one in and
 readers using it see that instead; leave it blank and they get what you wrote
 above.
 
-Finally, on **Permissions**, grant *View gated links* to the groups that should
+Finally, on **Permissions**, grant *View gated links* (permission key
+`linkrobins-link-gate.viewGatedLinks`) to the groups that should
 see the real links. Nobody has it by default. It is a permission rather than a
 single group setting, so you can give it to several groups at once and it
 survives a group being renamed or recreated.
@@ -94,6 +115,15 @@ outside what Link Gate can reach.
 Composer picks the right one for your forum on its own, so
 `composer require linkrobins/link-gate` is all you need either way.
 
+## Updating
+
+```sh
+composer update linkrobins/link-gate
+php flarum cache:clear
+```
+
 ## Links
 
+- [Packagist](https://packagist.org/packages/linkrobins/link-gate)
+- [Source](https://github.com/linkrobins/flarum-link-gate)
 - [Report a problem](https://github.com/linkrobins/flarum-link-gate/issues)
